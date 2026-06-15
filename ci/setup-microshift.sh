@@ -83,16 +83,13 @@ if [ -n "${REDHAT_REGISTRY_USER:-}" ] && [ -n "${REDHAT_REGISTRY_TOKEN:-}" ]; th
 	echo "$PULL_SECRET" | sudo podman exec -i microshift-okd-1 \
 		tee /etc/crio/openshift-pull-secret >/dev/null
 	sudo podman exec microshift-okd-1 chmod 600 /etc/crio/openshift-pull-secret
+
+	log "Restarting CRI-O to pick up new pull secret..."
+	sudo podman exec microshift-okd-1 systemctl restart crio
 fi
 
 log "Waiting for cluster readiness..."
 make -C "$MICROSHIFT_DIR" run-ready
-
-# The upstream Makefile's run-healthy checks greenboot-healthcheck.service,
-# which may not complete in the official Red Hat bootc image running as a
-# container. Skip it — we verify pod health after extracting kubeconfig.
-log "Giving MicroShift 30s to settle before extracting kubeconfig..."
-sleep 30
 
 # ── 4. Extract kubeconfig ────────────────────────────────────────────
 log "Extracting kubeconfig to $KUBECONFIG ..."
@@ -122,14 +119,21 @@ oc get nodes
 echo ""
 
 # ── 4b. Wait for core system pods ────────────────────────────────────
-log "Waiting for core MicroShift pods to be ready (up to 5 min)..."
-for i in $(seq 1 60); do
+log "Waiting for core MicroShift pods to be ready (up to 10 min)..."
+for i in $(seq 1 120); do
 	NOT_READY=$(oc get pods -A --no-headers 2>/dev/null | grep -cv -E "Running|Completed" || true)
 	if [ "$NOT_READY" -eq 0 ] 2>/dev/null; then
 		log "All system pods are Running/Completed."
 		break
 	fi
-	echo "  Attempt $i/60: $NOT_READY pod(s) not yet ready..."
+	if [ $((i % 12)) -eq 0 ]; then
+		echo "  ── Status at attempt $i/120 ($NOT_READY pod(s) not ready) ──"
+		oc get pods -A --no-headers 2>/dev/null | grep -v -E "Running|Completed" || true
+		echo "  ── CRI-O image pulls ──"
+		sudo podman exec microshift-okd-1 crictl images 2>/dev/null | head -10 || true
+	else
+		echo "  Attempt $i/120: $NOT_READY pod(s) not yet ready..."
+	fi
 	sleep 5
 done
 oc get pods -A
