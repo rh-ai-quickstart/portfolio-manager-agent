@@ -32,23 +32,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Resolve MicroShift release tag
-        id: microshift-tag
+      - name: Login to Red Hat registry
         run: |
-          TAG=$(curl -sf --max-time 30 \
-            "https://api.github.com/repos/microshift-io/microshift/releases/latest" \
-            | jq -r .tag_name) || true
-          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
-            TAG="4.21.0_g29f429c21_4.21.0_okd_scos.ec.15"
-            echo "::warning::GitHub API rate-limited; using fallback tag $TAG"
-          fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          sudo podman login -u '${{ secrets.REDHAT_REGISTRY_USER }}' \
+            -p '${{ secrets.REDHAT_REGISTRY_TOKEN }}' registry.redhat.io
       - name: Cache MicroShift bootc image
         if: ${{ !inputs.skip_image_cache }}
         uses: actions/cache@v4
         with:
           path: /tmp/cache/microshift.tar
-          key: microshift-bootc-${{ steps.microshift-tag.outputs.tag }}
+          key: microshift-rh-bootc-v4.22
       - name: Cache tests image
         if: ${{ !inputs.skip_image_cache }}
         uses: actions/cache@v4
@@ -79,7 +72,6 @@ jobs:
       - name: Setup MicroShift and prepare tests image (parallel)
         run: |
           export MICROSHIFT_IMAGE_CACHE=/tmp/cache/microshift.tar
-          export MICROSHIFT_TAG="${{ steps.microshift-tag.outputs.tag }}"
           ci/setup-microshift.sh &
           MICROSHIFT_PID=$!
 

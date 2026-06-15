@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 #
-# Bootstrap a single-node MicroShift (OKD) cluster inside a Podman container,
-# then install KServe and NemoGuardrails CRDs so that OpenShift AI custom
-# resources are accepted by the API server for Helm-based e2e testing.
+# Bootstrap a single-node MicroShift cluster inside a Podman container using
+# the official Red Hat MicroShift bootc image, then install KServe and
+# NemoGuardrails CRDs so that OpenShift AI custom resources are accepted by
+# the API server for Helm-based e2e testing.
 #
 # NOTE: Only CRDs are installed — no controllers. CRs will be created and
 # stored but not reconciled (no status updates, no pods spawned by KServe).
 # This is intentional for CI: we validate that the Helm chart deploys cleanly
 # and that application-level services (orchestrator, UI, tool agents) work.
+#
+# Prerequisites:
+#   sudo podman login registry.redhat.io  (needed to pull the official image)
 #
 # Usage:
 #   ci/setup-microshift.sh              # uses defaults
@@ -38,22 +42,9 @@ else
 	git clone --depth=1 "$MICROSHIFT_REPO" "$MICROSHIFT_DIR"
 fi
 
-# ── 2. Pull the latest bootc image (or load from cache) ─────────────
-if [ -n "${MICROSHIFT_TAG:-}" ]; then
-	TAG="$MICROSHIFT_TAG"
-	log "Using pre-resolved MicroShift tag: $TAG"
-else
-	log "Fetching latest MicroShift release tag..."
-	TAG=$(curl -sf --max-time 30 \
-		"https://api.github.com/repos/microshift-io/microshift/releases/latest" |
-		jq -r .tag_name)
-	if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
-		echo "ERROR: Could not determine latest MicroShift release tag"
-		exit 1
-	fi
-fi
-
-IMAGE="ghcr.io/microshift-io/microshift:${TAG}"
+# ── 2. Pull the official Red Hat MicroShift bootc image (or load from cache)
+IMAGE="${MICROSHIFT_IMAGE:-registry.redhat.io/openshift4/microshift-bootc-rhel9:v4.22}"
+log "Using MicroShift image: $IMAGE"
 CACHE_TAR="${MICROSHIFT_IMAGE_CACHE:-}"
 
 if sudo podman image exists "$IMAGE" 2>/dev/null; then
@@ -132,7 +123,7 @@ oc get crd nemoguardrails.trustyai.opendatahub.io
 
 # ── 7. Final verification ───────────────────────────────────────────
 echo ""
-log "=== MicroShift + OpenShift AI CRDs setup complete ==="
+log "=== Red Hat MicroShift + OpenShift AI CRDs setup complete ==="
 echo ""
 echo "  KUBECONFIG=$KUBECONFIG"
 echo "  MicroShift IP=$MICROSHIFT_IP"
