@@ -72,6 +72,8 @@ jobs:
       - name: Setup MicroShift and prepare tests image (parallel)
         run: |
           export MICROSHIFT_IMAGE_CACHE=/tmp/cache/microshift.tar
+          export REDHAT_REGISTRY_USER='${{ secrets.REDHAT_REGISTRY_USER }}'
+          export REDHAT_REGISTRY_TOKEN='${{ secrets.REDHAT_REGISTRY_TOKEN }}'
           ci/setup-microshift.sh &
           MICROSHIFT_PID=$!
 

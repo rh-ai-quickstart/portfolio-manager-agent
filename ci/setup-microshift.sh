@@ -69,6 +69,17 @@ sudo podman tag "$IMAGE" localhost/microshift-okd:latest
 log "Starting MicroShift cluster..."
 make -C "$MICROSHIFT_DIR" run
 
+# Inject pull secret so CRI-O inside the container can pull component
+# images from registry.redhat.io (router, DNS, service-ca, etc.).
+if [ -n "${REDHAT_REGISTRY_USER:-}" ] && [ -n "${REDHAT_REGISTRY_TOKEN:-}" ]; then
+	log "Injecting registry.redhat.io pull secret into MicroShift container..."
+	AUTH=$(echo -n "${REDHAT_REGISTRY_USER}:${REDHAT_REGISTRY_TOKEN}" | base64 -w0)
+	PULL_SECRET=$(printf '{"auths":{"registry.redhat.io":{"auth":"%s"}}}' "$AUTH")
+	echo "$PULL_SECRET" | sudo podman exec -i microshift-okd-1 \
+		tee /etc/crio/openshift-pull-secret >/dev/null
+	sudo podman exec microshift-okd-1 chmod 600 /etc/crio/openshift-pull-secret
+fi
+
 log "Waiting for cluster readiness..."
 make -C "$MICROSHIFT_DIR" run-ready
 
