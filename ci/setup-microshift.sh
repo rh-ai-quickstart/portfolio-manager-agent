@@ -69,6 +69,11 @@ sudo podman tag "$IMAGE" localhost/microshift-okd:latest
 log "Starting MicroShift cluster..."
 make -C "$MICROSHIFT_DIR" run
 
+# The official RHEL 9 bootc image runs firewalld, which blocks external
+# access to the API server. Disable it for CI.
+log "Disabling firewalld inside MicroShift container..."
+sudo podman exec microshift-okd-1 systemctl disable --now firewalld 2>/dev/null || true
+
 # Inject pull secret so CRI-O inside the container can pull component
 # images from registry.redhat.io (router, DNS, service-ca, etc.).
 if [ -n "${REDHAT_REGISTRY_USER:-}" ] && [ -n "${REDHAT_REGISTRY_TOKEN:-}" ]; then
