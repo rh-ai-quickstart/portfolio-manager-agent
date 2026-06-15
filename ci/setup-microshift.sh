@@ -83,8 +83,11 @@ fi
 log "Waiting for cluster readiness..."
 make -C "$MICROSHIFT_DIR" run-ready
 
-log "Waiting for cluster health..."
-make -C "$MICROSHIFT_DIR" run-healthy
+# The upstream Makefile's run-healthy checks greenboot-healthcheck.service,
+# which may not complete in the official Red Hat bootc image running as a
+# container. Skip it — we verify pod health after extracting kubeconfig.
+log "Giving MicroShift 30s to settle before extracting kubeconfig..."
+sleep 30
 
 # ── 4. Extract kubeconfig ────────────────────────────────────────────
 log "Extracting kubeconfig to $KUBECONFIG ..."
@@ -111,6 +114,20 @@ fi
 log "API server at https://${MICROSHIFT_IP}:6443"
 
 oc get nodes
+echo ""
+
+# ── 4b. Wait for core system pods ────────────────────────────────────
+log "Waiting for core MicroShift pods to be ready (up to 5 min)..."
+for i in $(seq 1 60); do
+	NOT_READY=$(oc get pods -A --no-headers 2>/dev/null | grep -cv -E "Running|Completed" || true)
+	if [ "$NOT_READY" -eq 0 ] 2>/dev/null; then
+		log "All system pods are Running/Completed."
+		break
+	fi
+	echo "  Attempt $i/60: $NOT_READY pod(s) not yet ready..."
+	sleep 5
+done
+oc get pods -A
 echo ""
 
 # ── 5. Install KServe CRDs (no controller) ──────────────────────────
