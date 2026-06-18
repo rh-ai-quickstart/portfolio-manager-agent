@@ -1,6 +1,6 @@
-# Build compliant investment portfolios with AI risk management
+# Build compliant investment portfolios with AI risk agent
 
-AI multi-agent system that automates portfolio construction, compliance checking, and risk analysis for investment advisors.
+AI multi-agent system that automates portfolio construction, compliance checking, and risk analysis for investment advisors
 
 ## Table of contents
 
@@ -46,7 +46,7 @@ An AI multi-agent system that automates the end-to-end portfolio construction wo
 ### Our Solution Stack
 
 #### AI/ML
-* LLM — powers email drafting, agentic chat reasoning, and tool selection (served via RHOAI model serving or any OpenAI-compatible endpoint). Tested with [Llama 3.3 70B quantized](https://huggingface.co/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8).
+* LLM — powers email drafting, agentic chat reasoning, and tool selection (served via OpenShift AI model serving or any OpenAI-compatible endpoint). Tested with [Llama 3.3 70B quantized](https://huggingface.co/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8).
 * scikit-learn MLP — classifies guideline sentences as prohibition-related to extract banned tickers.
 
 #### Backend Services
@@ -62,7 +62,7 @@ An AI multi-agent system that automates the end-to-end portfolio construction wo
 * Red Hat OpenShift + Helm — production deployment.
 * Optional: Knative — serverless agent auto-scaling.
 
-#### Red Hat OpenShift AI
+#### Red Hat® OpenShift® AI
 
 * **Model Serving (KServe)** — serves the scikit-learn MLP classifier as an InferenceService (MLServer sklearn runtime, S3/MinIO storage).
 * **NeMo Guardrails (TrustyAI)** — input/output filtering that blocks sensitive data and off-topic requests.
@@ -72,6 +72,8 @@ An AI multi-agent system that automates the end-to-end portfolio construction wo
 #### Phase 1: Deterministic Pipeline
 
 The UI calls granular orchestrator endpoints in sequence, reimplementing the retry loop client-side for real-time progress feedback.
+
+*Figure 1: Deterministic pipeline — parse guidelines, build portfolio, calculate VaR with retry loop, draft email.*
 
 ```mermaid
 flowchart TD
@@ -87,6 +89,8 @@ flowchart TD
 #### Phase 2: Agentic Chat
 
 The LLM selects from `portfolio_equities`, `portfolio_replace_symbol`, and `value_at_risk` tools. Guidelines are frozen — prohibited tickers cannot be overridden. VaR is recalculated automatically after every portfolio mutation.
+
+*Figure 2: Agentic chat — LLM selects tools to modify holdings and recalculate VaR while respecting frozen guidelines.*
 
 ```mermaid
 sequenceDiagram
@@ -108,6 +112,10 @@ sequenceDiagram
   UI-->>User: Display answer + refreshed portfolio outputs
 ```
 
+### See it in action
+
+Deploy locally with `make deploy-local` and open the UI at http://localhost:8080 to explore the pipeline and chat tabs. See the [Usage](#usage) section for a walkthrough.
+
 ## Requirements
 
 NOTE: This quickstart assumes a large language model is already deployed in your environment. Guidance for deploying models is available in the [References](#references) section.
@@ -119,7 +127,7 @@ NOTE: This quickstart assumes a large language model is already deployed in your
 - Memory: 4 GiB (request) / 8 GiB (limit)
 - Storage: 10 GiB
 
-> **Note:** GPU is not required for the application itself. If you plan to deploy your own LLM on OpenShift AI, see [References](#references) for model serving guidance — GPU requirements depend on the model you choose.
+* **Optional:** GPU — required if you plan to deploy your own model on OpenShift AI, for deployment refer to [References](#references).
 
 ### Minimum software requirements
 
@@ -243,8 +251,10 @@ helm uninstall investment-advisor-agent -n investment-advisor-agent
 
 ## Tags
 
-* Title: Build compliant investment portfolios with AI risk management
-* Description: AI multi-agent system that automates portfolio construction, compliance checking, and risk analysis for investment advisors.
-* Industry: Financial Services
-* Product: Red Hat OpenShift AI
-* Contributor org: Red Hat
+| Tag | Value |
+| --- | --- |
+| Title | Build compliant investment portfolios with AI risk agent |
+| Description | AI multi-agent system that automates portfolio construction, compliance checking, and risk analysis for investment advisors |
+| Industry | Financial Services |
+| Product | Red Hat OpenShift AI |
+| Contributor org | Red Hat |
