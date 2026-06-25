@@ -114,7 +114,7 @@ sequenceDiagram
 
 ### See it in action
 
-Deploy locally with `make deploy-local` and open the UI at http://localhost:8080 to explore the pipeline and chat tabs. See the [Usage](#usage) section for a walkthrough.
+Deploy locally with `make deploy-local` and open the UI at http://localhost:8080, or deploy to OpenShift with `make deploy-cluster` and open the route (see [Usage](#usage)). Explore the pipeline and chat tabs.
 
 ## Requirements
 
@@ -159,8 +159,8 @@ NOTE: This quickstart assumes a large language model is already deployed in your
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/rh-ai-quickstart/investment-advisor-agent.git
-cd investment-advisor-agent
+git clone https://github.com/rh-ai-quickstart/portfolio-manager-agent.git
+cd portfolio-manager-agent
 ```
 
 2. Deploy to OpenShift:
@@ -168,13 +168,18 @@ cd investment-advisor-agent
 make deploy-cluster
 ```
 
+3. Get the UI URL:
+```bash
+oc get route ui -n portfolio-manager-agent -o jsonpath='https://{.spec.host}'
+```
+
 This reads your `.env` file (if present) and passes any non-empty `OPENAI_*` values to Helm, so the UI starts with LLM connection settings pre-filled.
 
 To deploy with serverless (Knative) agents:
 
 ```bash
-helm upgrade --install investment-advisor-agent deploy/helm \
-  -n investment-advisor-agent --create-namespace \
+helm upgrade --install portfolio-manager-agent deploy/helm \
+  -n portfolio-manager-agent --create-namespace \
   --set serverless.enabled=true
 ```
 
@@ -183,8 +188,8 @@ helm upgrade --install investment-advisor-agent deploy/helm \
 #### 1. Clone and Setup Repository
 
 ```bash
-git clone https://github.com/rh-ai-quickstart/investment-advisor-agent.git
-cd investment-advisor-agent
+git clone https://github.com/rh-ai-quickstart/portfolio-manager-agent.git
+cd portfolio-manager-agent
 ```
 
 #### 2. Configure Environment Variables
@@ -216,7 +221,11 @@ make deploy-local
 
 ### Usage
 
-Open the UI at **http://localhost:8080** (or the OpenShift route).
+Open the UI at **http://localhost:8080** (local) or the OpenShift route:
+
+```bash
+oc get route ui -n portfolio-manager-agent -o jsonpath='https://{.spec.host}'
+```
 
 If you created a `.env` file, the LLM endpoint, API key, and model are loaded automatically. Otherwise, expand **Connection settings** to enter them manually.
 
@@ -242,7 +251,7 @@ podman compose -f deploy/local/compose.yml down
 #### Delete from OpenShift
 
 ```bash
-helm uninstall investment-advisor-agent -n investment-advisor-agent
+helm uninstall portfolio-manager-agent -n portfolio-manager-agent
 ```
 
 ## References
@@ -251,10 +260,8 @@ helm uninstall investment-advisor-agent -n investment-advisor-agent
 
 ## Tags
 
-| Tag | Value |
-| --- | --- |
-| Title | Build compliant investment portfolios with AI risk agent |
-| Description | AI multi-agent system that automates portfolio construction, compliance checking, and risk analysis for investment advisors |
-| Industry | Financial Services |
-| Product | Red Hat OpenShift AI |
-| Contributor org | Red Hat |
+- **Title:** Build compliant investment portfolios with AI risk agent
+- **Description:** AI multi-agent system that automates portfolio construction, compliance checking, and risk analysis for investment advisors
+- **Industry:** Banking and securities
+- **Product:** Red Hat OpenShift AI
+- **Contributor org:** Red Hat
