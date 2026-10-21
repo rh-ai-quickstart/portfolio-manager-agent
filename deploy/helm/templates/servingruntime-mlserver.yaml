@@ -14,12 +14,14 @@ spec:
   containers:
     - name: kserve-container
       image: docker.io/seldonio/mlserver:1.7.1-sklearn
+      command: [mlserver]
+      args: [start, /mnt/models]
       ports:
         - containerPort: 8080
           protocol: TCP
       env:
         - name: MLSERVER_MODELS_DIR
-          value: /models/_mlserver_models
+          value: /mnt/models
         - name: MLSERVER_GRPC_PORT
           value: "8081"
         - name: MLSERVER_HTTP_PORT

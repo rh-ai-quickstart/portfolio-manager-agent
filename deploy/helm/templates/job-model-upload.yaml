@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   backoffLimit: 3
-  ttlSecondsAfterFinished: 300
+  activeDeadlineSeconds: 300
   template:
     spec:
       restartPolicy: OnFailure
@@ -21,34 +21,78 @@ spec:
               mountPath: /export
       containers:
         - name: upload
-          image: docker.io/minio/mc:latest
+          image: registry.access.redhat.com/ubi10/python-312-minimal:latest
           command:
             - sh
-            - -c
+            - -ec
             - |
-              set -e
-              ls -la /export/
-              for i in $(seq 1 30); do
-                mc alias set minio http://minio:9000 "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" && break
-                echo "Waiting for MinIO... ($i/30)"
-                sleep 2
-              done
-              mc mb --ignore-existing minio/models
-              mc cp --recursive /export/ minio/models/guidelines-mlp/
-              mc ls minio/models/guidelines-mlp/
-              echo "Model uploaded successfully"
+              pip install --no-cache-dir -q --target /tmp/python boto3==1.40.76
+              python - <<'PYTHON'
+              import os
+              import time
+              from pathlib import Path
+              from urllib.request import urlopen
+
+              import boto3
+              from botocore.config import Config
+              from botocore.exceptions import BotoCoreError, ClientError
+
+              client = boto3.client(
+                  "s3", endpoint_url=os.environ["AWS_ENDPOINT_URL"],
+                  config=Config(s3={"addressing_style": "path"},
+                                connect_timeout=5, read_timeout=10),
+              )
+              for attempt in range(90):
+                  try:
+                      with urlopen(os.environ["STORAGE_HEALTH_URL"], timeout=5):
+                          pass
+                      client.list_buckets()
+                      break
+                  except (OSError, BotoCoreError, ClientError):
+                      if attempt == 89:
+                          raise
+                      print("Waiting for storage...", flush=True)
+                      time.sleep(2)
+              try:
+                  client.head_bucket(Bucket="models")
+              except ClientError as error:
+                  if error.response["Error"]["Code"] not in ("404", "NoSuchBucket"):
+                      raise
+                  client.create_bucket(Bucket="models")
+              files = [path for path in Path("/export").rglob("*") if path.is_file()]
+              if not files:
+                  raise RuntimeError("No model files found in /export")
+              for path in files:
+                  key = "guidelines-mlp/" + path.relative_to("/export").as_posix()
+                  client.upload_file(str(path), "models", key)
+                  body = client.get_object(Bucket="models", Key=key)["Body"]
+                  try:
+                      if body.read() != path.read_bytes():
+                          raise RuntimeError(f"Upload verification failed: {key}")
+                  finally:
+                      body.close()
+                  print(f"Verified s3://models/{key}", flush=True)
+              PYTHON
           env:
-            - name: MC_CONFIG_DIR
-              value: /tmp/.mc
+            - name: HOME
+              value: /tmp
+            - name: PYTHONPATH
+              value: /tmp/python
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: AWS_ENDPOINT_URL
+              value: {{ printf "http://%s" (include "investment-advisor-agent.storageEndpoint" .) | quote }}
+            - name: STORAGE_HEALTH_URL
+              value: {{ printf "http://%s:5000/api" (include "investment-advisor-agent.storageName" .) | quote }}
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: minio-credentials
+                  name: {{ include "investment-advisor-agent.storageSecret" . }}
                   key: AWS_ACCESS_KEY_ID
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: minio-credentials
+                  name: {{ include "investment-advisor-agent.storageSecret" . }}
                   key: AWS_SECRET_ACCESS_KEY
           volumeMounts:
             - name: model-files

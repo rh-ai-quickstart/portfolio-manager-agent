@@ -64,7 +64,7 @@ An AI multi-agent system that automates the end-to-end portfolio construction wo
 
 #### Red Hat® OpenShift® AI
 
-* **Model Serving (KServe)** — serves the scikit-learn MLP classifier as an InferenceService (MLServer sklearn runtime, S3/MinIO storage).
+* **Model Serving (KServe)** — serves the scikit-learn MLP classifier as an InferenceService (MLServer sklearn runtime, S3-compatible storage via the shared aws-compatible-storage chart).
 * **NeMo Guardrails (TrustyAI)** — input/output filtering that blocks sensitive data and off-topic requests.
 
 ### Architecture diagrams
@@ -146,7 +146,7 @@ NOTE: This quickstart assumes a large language model is already deployed in your
 #### Local Development
 
 - Permission to run containers via Podman or Docker
-- Access to local ports: `5000`, `7001`, `7002`, `7003`, `8080`
+- Access to local ports: `5000`, `5001`, `7480`, `7001`, `7002`, `7003`, `8080`
 
 #### OpenShift Cluster Deployment
 
@@ -165,7 +165,7 @@ cd portfolio-manager-agent
 
 2. Deploy to OpenShift:
 ```bash
-make deploy-cluster
+make deploy-cluster NAMESPACE=portfolio-manager-agent
 ```
 
 3. Get the UI URL:

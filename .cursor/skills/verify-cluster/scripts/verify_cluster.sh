@@ -13,7 +13,7 @@ DEPLOYMENTS=(
 	investment-advisor-agent-risk
 	investment-advisor-agent-portfolio
 	investment-advisor-agent-guidelines
-	minio
+	aws-compatible-storage
 )
 
 pass=0

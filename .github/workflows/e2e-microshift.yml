@@ -104,25 +104,25 @@ jobs:
             --from-file=investment-guidelines.pdf=tools/guidelines/docs/client-100/investment-guidelines.pdf \
             -n "$NAMESPACE"
 
-          sudo podman exec microshift-okd-1 mkdir -p /var/data/minio
-          sudo podman exec microshift-okd-1 chmod 777 /var/data/minio
+          sudo podman exec microshift-okd-1 mkdir -p /var/data/aws-compatible-storage
+          sudo podman exec microshift-okd-1 chmod 777 /var/data/aws-compatible-storage
 
           oc apply -n "$NAMESPACE" -f - <<'EOF'
           apiVersion: v1
           kind: PersistentVolume
           metadata:
-            name: minio-pv
+            name: aws-compatible-storage-pv
           spec:
             capacity:
-              storage: 1Gi
+              storage: 10Gi
             accessModes:
               - ReadWriteOnce
             hostPath:
-              path: /var/data/minio
+              path: /var/data/aws-compatible-storage
               type: DirectoryOrCreate
             claimRef:
               namespace: ci-e2e
-              name: minio-data
+              name: aws-compatible-storage-data
           EOF
       - name: Deploy app via Helm
         run: >
@@ -142,8 +142,8 @@ jobs:
             oc rollout status "deployment/$dep" -n "$NAMESPACE" --timeout=300s
           done
 
-          echo "Waiting for minio ..."
-          oc rollout status deployment/minio -n "$NAMESPACE" --timeout=120s
+          echo "Waiting for aws-compatible-storage ..."
+          oc rollout status deployment/aws-compatible-storage -n "$NAMESPACE" --timeout=120s
 
           echo "Waiting for model-upload Job ..."
           oc wait --for=condition=Complete job/model-upload \
@@ -214,7 +214,7 @@ jobs:
           echo ""
           echo "=== Pod logs ==="
           for dep in ui orchestrator investment-advisor-agent-risk \
-                     investment-advisor-agent-portfolio investment-advisor-agent-guidelines minio; do
+                     investment-advisor-agent-portfolio investment-advisor-agent-guidelines aws-compatible-storage; do
             echo "--- $dep ---"
             oc logs "deploy/$dep" -n "$NAMESPACE" --tail=50 || true
           done

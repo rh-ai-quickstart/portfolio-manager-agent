@@ -22,9 +22,27 @@ serverless:
   concurrency: 10
   timeoutSeconds: 60
 guidelines:
-  inferenceUrl: "http://guidelines-mlp:80"
+  inferenceUrl: "http://guidelines-mlp-predictor:80"
 guardrails:
   enabled: true
-minio:
-  rootUser: minioadmin
-  rootPassword: minioadmin
+# The parent owns the shared credentials Secret to add KServe annotations.
+aws-compatible-storage:
+  fullnameOverride: aws-compatible-storage
+  image:
+    repository: quay.io/rh-aiservices-bu/s4
+    tag: "0.3.2"
+  s3:
+    accessKeyId: s4admin
+    secretAccessKey: s4secret
+    existingSecret: aws-compatible-storage-credentials
+  auth:
+    enabled: true
+    username: admin
+    password: changeme # Demo only; override in a private values file.
+  route:
+    enabled: true
+    s3Api:
+      enabled: false
+  storage:
+    data:
+      size: 10Gi

@@ -4,4 +4,4 @@ metadata:
   name: model-serving
   namespace: {{ .Values.namespace }}
 secrets:
-  - name: minio-credentials
+  - name: {{ include "investment-advisor-agent.storageSecret" . }}
