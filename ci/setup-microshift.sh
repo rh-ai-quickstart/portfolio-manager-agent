@@ -21,6 +21,8 @@ set -euo pipefail
 
 # ── Configuration ────────────────────────────────────────────────────
 MICROSHIFT_REPO="${MICROSHIFT_REPO:-https://github.com/microshift-io/microshift.git}"
+# Update the source revision and image tag together to keep startup scripts compatible with the image.
+MICROSHIFT_REF="${MICROSHIFT_REF:-e45de26cf28869c2a53cf7d256ef12637c374387}"
 MICROSHIFT_DIR="${MICROSHIFT_DIR:-/tmp/microshift-upstream}"
 KUBECONFIG="${KUBECONFIG:-/tmp/microshift-kubeconfig}"
 KSERVE_VERSION="${KSERVE_VERSION:-v0.16.0}"
@@ -37,21 +39,12 @@ if [ -d "$MICROSHIFT_DIR" ]; then
 else
 	git clone --depth=1 "$MICROSHIFT_REPO" "$MICROSHIFT_DIR"
 fi
+git -C "$MICROSHIFT_DIR" fetch --depth=1 origin "$MICROSHIFT_REF"
+git -C "$MICROSHIFT_DIR" checkout --detach FETCH_HEAD
 
-# ── 2. Pull the latest bootc image (or load from cache) ─────────────
-if [ -n "${MICROSHIFT_TAG:-}" ]; then
-	TAG="$MICROSHIFT_TAG"
-	log "Using pre-resolved MicroShift tag: $TAG"
-else
-	log "Fetching latest MicroShift release tag..."
-	TAG=$(curl -sf --max-time 30 \
-		"https://api.github.com/repos/microshift-io/microshift/releases/latest" |
-		jq -r .tag_name)
-	if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
-		echo "ERROR: Could not determine latest MicroShift release tag"
-		exit 1
-	fi
-fi
+# ── 2. Pull the pinned bootc image (or load from cache) ─────────────
+TAG="${MICROSHIFT_TAG:-4.22.0_202610071017_g0a516b4eb_4.22.0_okd_scos.ec.16}"
+log "Using MicroShift tag: $TAG"
 
 IMAGE="ghcr.io/microshift-io/microshift:${TAG}"
 CACHE_TAR="${MICROSHIFT_IMAGE_CACHE:-}"

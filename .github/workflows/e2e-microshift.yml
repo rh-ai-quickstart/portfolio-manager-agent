@@ -32,16 +32,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Resolve MicroShift release tag
+      - name: Use pinned MicroShift release tag
         id: microshift-tag
         run: |
-          TAG=$(curl -sf --max-time 30 \
-            "https://api.github.com/repos/microshift-io/microshift/releases/latest" \
-            | jq -r .tag_name) || true
-          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
-            TAG="4.21.0_g29f429c21_4.21.0_okd_scos.ec.15"
-            echo "::warning::GitHub API rate-limited; using fallback tag $TAG"
-          fi
+          # Update together with the source revision and default tag in ci/setup-microshift.sh.
+          TAG="4.22.0_202610071017_g0a516b4eb_4.22.0_okd_scos.ec.16"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
       - name: Cache MicroShift bootc image
         if: ${{ !inputs.skip_image_cache }}
