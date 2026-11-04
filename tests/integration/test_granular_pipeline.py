@@ -6,6 +6,8 @@ import httpx
 import pytest
 
 from .conftest import (
+    MARKET_DATA_BACKOFF,
+    MARKET_DATA_RETRIES,
     PORTFOLIO_VALUE,
     QTY_SYMBOLS,
     UI_API_BASE,
@@ -33,6 +35,8 @@ def test_granular_pipeline_portfolio_and_var(
             "qty_symbols": QTY_SYMBOLS,
             "prohibited_tickers": prohibited,
         },
+        retries=MARKET_DATA_RETRIES,
+        backoff=MARKET_DATA_BACKOFF,
     ).json()
     portfolio = portfolio_response["portfolio"]
     assert len(portfolio) == QTY_SYMBOLS
@@ -42,6 +46,8 @@ def test_granular_pipeline_portfolio_and_var(
         http_client,
         f"{UI_API_BASE}/pipeline/var",
         {"portfolio": portfolio},
+        retries=MARKET_DATA_RETRIES,
+        backoff=MARKET_DATA_BACKOFF,
     ).json()
     value_at_risk = float(var_response["valueAtRisk"])
     assert value_at_risk > 0

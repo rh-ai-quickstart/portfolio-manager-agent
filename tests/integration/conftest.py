@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,6 +19,12 @@ PORTFOLIO_VALUE = int(os.getenv("PORTFOLIO_VALUE", "1000000"))
 QTY_SYMBOLS = int(os.getenv("QTY_SYMBOLS", "5"))
 MAX_VAR = float(os.getenv("MAX_VAR", "35000"))
 HTTP_TIMEOUT = float(os.getenv("CURL_MAX_TIME", "60"))
+
+# Market-data steps (portfolio, VaR) hit Yahoo Finance via the tool agents, which
+# intermittently rate-limits datacenter IPs ("Too Many Requests"). Retry 5xx
+# responses with a backoff so transient rate limits do not fail the test run.
+MARKET_DATA_RETRIES = int(os.getenv("MARKET_DATA_RETRIES", "3"))
+MARKET_DATA_BACKOFF = float(os.getenv("MARKET_DATA_BACKOFF", "30"))
 
 UI_BASE = os.getenv("UI_BASE", "http://localhost:8080").rstrip("/")
 ORCH_BASE = os.getenv("ORCH_BASE", "http://localhost:5000").rstrip("/")
@@ -109,8 +116,30 @@ def guidelines_payload() -> dict[str, str]:
     return {"url_investment_guidelines": GUIDELINES_CLIENT}
 
 
-def post_json(client: httpx.Client, url: str, payload: dict) -> httpx.Response:
+def post_json(
+    client: httpx.Client,
+    url: str,
+    payload: dict,
+    retries: int = 0,
+    backoff: float = 0.0,
+) -> httpx.Response:
+    """POST a JSON payload and assert HTTP 200.
+
+    With retries > 0, 5xx responses are retried after `backoff` seconds each
+    (use for market-data steps that depend on external Yahoo Finance quotes).
+    """
     response = client.post(url, json=payload)
+    for attempt in range(1, retries + 1):
+        if response.status_code < 500:
+            break
+        print(
+            f"POST {url} returned HTTP {response.status_code} "
+            f"(attempt {attempt}/{retries + 1}), retrying in {backoff:.0f}s: "
+            f"{response.text[:200]}",
+            flush=True,
+        )
+        time.sleep(backoff)
+        response = client.post(url, json=payload)
     assert response.status_code == 200, (
         f"POST {url} returned HTTP {response.status_code}: {response.text[:300]}"
     )
