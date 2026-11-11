@@ -114,9 +114,10 @@ def test_e2e_chat_swap_symbol(http_client: httpx.Client, llm_config: LlmConfig):
     disliked = pipeline["portfolio"][0]["symbol"]
     var_before = pipeline["valueAtRisk"]
 
-    chat = http_client.post(
+    chat = post_json(
+        http_client,
         f"{UI_API_BASE}/chat",
-        json={
+        {
             "message": (
                 f"I do not like {disliked} in this portfolio. "
                 "Please suggest a replacement and update the holdings."
@@ -126,7 +127,6 @@ def test_e2e_chat_swap_symbol(http_client: httpx.Client, llm_config: LlmConfig):
             "config": llm_config.as_payload(),
         },
     )
-    assert chat.status_code == 200, chat.text[:500]
     data = chat.json()
     assert not data.get("error"), f"Chat error: {data.get('error')}"
     assert len(data.get("content", "")) >= 30

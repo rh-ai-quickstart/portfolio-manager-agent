@@ -20,11 +20,13 @@ QTY_SYMBOLS = int(os.getenv("QTY_SYMBOLS", "5"))
 MAX_VAR = float(os.getenv("MAX_VAR", "35000"))
 HTTP_TIMEOUT = float(os.getenv("CURL_MAX_TIME", "60"))
 
-# Market-data steps (portfolio, VaR) hit Yahoo Finance via the tool agents, which
-# intermittently rate-limits datacenter IPs ("Too Many Requests"). Retry 5xx
-# responses with a backoff so transient rate limits do not fail the test run.
-MARKET_DATA_RETRIES = int(os.getenv("MARKET_DATA_RETRIES", "3"))
-MARKET_DATA_BACKOFF = float(os.getenv("MARKET_DATA_BACKOFF", "30"))
+# Pipeline steps depend on external services that intermittently fail from
+# datacenter IPs: Yahoo Finance rate-limits the tool agents ("Too Many
+# Requests") and the LLM endpoint's route briefly returns 5xx error pages.
+# Retry 5xx responses with a backoff so transient failures do not fail the
+# test run. Set PIPELINE_RETRIES=0 to disable (e.g. fast local iteration).
+PIPELINE_RETRIES = int(os.getenv("PIPELINE_RETRIES", "3"))
+PIPELINE_BACKOFF = float(os.getenv("PIPELINE_BACKOFF", "30"))
 
 UI_BASE = os.getenv("UI_BASE", "http://localhost:8080").rstrip("/")
 ORCH_BASE = os.getenv("ORCH_BASE", "http://localhost:5000").rstrip("/")
@@ -120,14 +122,20 @@ def post_json(
     client: httpx.Client,
     url: str,
     payload: dict,
-    retries: int = 0,
-    backoff: float = 0.0,
+    retries: int | None = None,
+    backoff: float | None = None,
 ) -> httpx.Response:
     """POST a JSON payload and assert HTTP 200.
 
-    With retries > 0, 5xx responses are retried after `backoff` seconds each
-    (use for market-data steps that depend on external Yahoo Finance quotes).
+    5xx responses are retried after `backoff` seconds each (pipeline steps
+    depend on external Yahoo Finance quotes and the LLM endpoint, both of
+    which intermittently fail from datacenter IPs). Defaults come from
+    PIPELINE_RETRIES / PIPELINE_BACKOFF; pass retries=0 to opt out.
     """
+    if retries is None:
+        retries = PIPELINE_RETRIES
+    if backoff is None:
+        backoff = PIPELINE_BACKOFF
     response = client.post(url, json=payload)
     for attempt in range(1, retries + 1):
         if response.status_code < 500:

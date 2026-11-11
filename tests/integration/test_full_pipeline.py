@@ -13,15 +13,17 @@ from .conftest import (
     QTY_SYMBOLS,
     LlmConfig,
     portfolio_overlap,
+    post_json,
 )
 
 
 @pytest.mark.integration
 @pytest.mark.llm
 def test_full_pipeline(http_client: httpx.Client, llm_config: LlmConfig):
-    response = http_client.post(
+    response = post_json(
+        http_client,
         f"{ORCH_BASE}/pipeline",
-        json={
+        {
             "url_investment_guidelines": GUIDELINES_CLIENT,
             "portfolio_value": PORTFOLIO_VALUE,
             "qty_symbols": QTY_SYMBOLS,
@@ -29,7 +31,6 @@ def test_full_pipeline(http_client: httpx.Client, llm_config: LlmConfig):
             "config": llm_config.as_payload(),
         },
     )
-    assert response.status_code == 200, response.text[:500]
     data = response.json()
     assert not data.get("error")
 

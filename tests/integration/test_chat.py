@@ -13,15 +13,17 @@ from .conftest import (
     QTY_SYMBOLS,
     LlmConfig,
     portfolio_overlap,
+    post_json,
 )
 
 
 @pytest.mark.integration
 @pytest.mark.llm
 def test_chat_rejects_first_holding(http_client: httpx.Client, llm_config: LlmConfig):
-    pipeline = http_client.post(
+    pipeline = post_json(
+        http_client,
         f"{ORCH_BASE}/pipeline",
-        json={
+        {
             "url_investment_guidelines": GUIDELINES_CLIENT,
             "portfolio_value": PORTFOLIO_VALUE,
             "qty_symbols": QTY_SYMBOLS,
@@ -29,15 +31,15 @@ def test_chat_rejects_first_holding(http_client: httpx.Client, llm_config: LlmCo
             "config": llm_config.as_payload(),
         },
     )
-    assert pipeline.status_code == 200, pipeline.text[:500]
     pipeline_data = pipeline.json()
     context = pipeline_data["context"]
     var_before = float(pipeline_data["valueAtRisk"])
     disliked_symbol = pipeline_data["portfolio"][0]["symbol"]
 
-    chat = http_client.post(
+    chat = post_json(
+        http_client,
         f"{ORCH_BASE}/chat",
-        json={
+        {
             "message": (
                 f"I do not like {disliked_symbol} in this portfolio. "
                 "Please suggest a replacement and update the holdings."
@@ -47,7 +49,6 @@ def test_chat_rejects_first_holding(http_client: httpx.Client, llm_config: LlmCo
             "config": llm_config.as_payload(),
         },
     )
-    assert chat.status_code == 200, chat.text[:500]
     chat_data = chat.json()
     assert not chat_data.get("error")
     assert len(chat_data.get("content", "")) >= 30
