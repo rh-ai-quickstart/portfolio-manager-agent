@@ -1,6 +1,6 @@
 namespace: investment-advisor-agent
 image:
-  repository: quay.io/ikatav/portfolio-manager-agent
+  repository: quay.io/rh-ai-quickstart/portfolio-manager-agent
   tags:
     ui: ui
     orchestrator: orchestrator
