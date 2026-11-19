@@ -84,7 +84,7 @@ services:
       - storage-data:/var/lib/ceph/radosgw
     restart: unless-stopped
   model-upload:
-    image: registry.access.redhat.com/ubi10/python-312-minimal:latest
+    image: registry.access.redhat.com/ubi10/python-312-minimal:10.3-1794522132
     depends_on:
       aws-compatible-storage:
         condition: service_started
