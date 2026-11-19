@@ -174,7 +174,7 @@ Edit `frontend/src/`. React components live in `components/`, pipeline logic in 
 ./build-script/build_script.sh
 ```
 
-Images are tagged for `quay.io/ikatav/portfolio-manager-agent:<service-name>`.
+Images are tagged for `quay.io/rh-ai-quickstart/portfolio-manager-agent:<service-name>`.
 
 ### Running tests
 
