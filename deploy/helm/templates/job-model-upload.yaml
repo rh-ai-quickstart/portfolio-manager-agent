@@ -21,7 +21,7 @@ spec:
               mountPath: /export
       containers:
         - name: upload
-          image: registry.access.redhat.com/ubi10/python-312-minimal:latest
+          image: registry.access.redhat.com/ubi10/python-312-minimal:10.3-1794522132
           command:
             - sh
             - -ec
